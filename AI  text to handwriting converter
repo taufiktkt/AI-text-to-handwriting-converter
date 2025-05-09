@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwriting Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Gochi+Hand&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2b2d42;
+            --text-light: #8d99ae;
+            --paper-white: #fdfefe;
+            --ink-black: #1a1a1a;
+            --ink-blue: #1a3a8c;
+            --ink-red: #ef233c;
+            --ink-pencil: #6d6d6d;
+            --border-radius: 12px;
+            --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 380px 1fr 350px;
+            gap: 25px;
+        }
+
+        .panel {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--box-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            margin-bottom: 18px;
+            color: var(--primary);
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        .input-section {
+            position: relative;
+        }
+
+        .input-section textarea {
+            width: 100%;
+            height: 220px;
+            padding: 18px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius);
+            resize: none;
+            font-size: 16px;
+            margin-bottom: 15px;
+            background-color: var(--card-bg);
+            color: var(--text);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-section textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .sample-text-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: rgba(255,255,255,0.8);
+            border: none;
+            color: var(--primary);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .settings-group {
+            margin-bottom: 25px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-size: 0.95rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        select {
+            padding: 10px 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius);
+            width: 160px;
+            background-color: var(--card-bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 160px;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(0, 0, 0, 0.1);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+
+        .preview-container {
+            position: relative;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .paper {
+            background-color: var(--paper-white);
+            padding: 50px;
+            width: 100%;
+            min-height: 700px;
+            box-shadow: var(--box-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lined-paper {
+            background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+            background-size: 100% 28px;
+            background-position: 0 50px;
+        }
+
+        .grid-paper {
+            background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                              linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        .yellow-paper {
+            background-color: #fff8e1;
+            background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+            background-size: 100% 28px;
+            background-position: 0 50px;
+        }
+
+        .handwriting {
+            font-size: 20px;
+            line-height: 28px;
+            white-space: pre-wrap;
+            padding-top: 20px;
+        }
+
+        .output-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .ink-color-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .ink-color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .ink-color-option.selected {
+            border-color: var(--primary);
+        }
+
+        .ink-black { background-color: var(--ink-black); }
+        .ink-blue { background-color: var(--ink-blue); }
+        .ink-red { background-color: var(--ink-red); }
+        .ink-pencil { background-color: var(--ink-pencil); }
+
+        /* Handwriting fonts */
+        .font-cursive { font-family: 'Dancing Script', cursive; }
+        .font-print { font-family: 'Gochi Hand', cursive; }
+        .font-neat { font-family: 'Kalam', cursive; }
+
+        /* Loading indicator */
+        .loading {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border-radius: var(--border-radius);
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4cc9f0;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-light);
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .empty-state small {
+            font-size: 0.9rem;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #06d6a0;
+            color: white;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 350px 1fr;
+            }
+            
+            .output-panel {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .output-panel {
+                grid-column: span 1;
+            }
+            
+            .preview-container {
+                min-height: 500px;
+            }
+            
+            .paper {
+                min-height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel input-panel">
+            <div class="input-section">
+                <button class="sample-text-btn" id="sample-text-btn">Sample Text</button>
+                <textarea id="input-text" placeholder="Type or paste your text here..."></textarea>
+            </div>
+            
+            <div class="settings-group">
+                <h2>Handwriting Style</h2>
+                <div class="setting-row">
+                    <label for="font-style">Font Style</label>
+                    <select id="font-style">
+                        <option value="font-cursive">Casual Cursive</option>
+                        <option value="font-print">Printed Style</option>
+                        <option value="font-neat">Neat Handwriting</option>
+                    </select>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="font-size">Font Size</label>
+                    <input type="range" id="font-size" min="14" max="28" value="20">
+                </div>
+                
+                <div class="setting-row">
+                    <label for="line-height">Line Spacing</label>
+                    <input type="range" id="line-height" min="1.2" max="2.5" step="0.1" value="1.6">
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h2>Ink Options</h2>
+                <div class="setting-row">
+                    <label>Ink Color</label>
+                    <input type="color" id="ink-color" value="#1A1A1A">
+                </div>
+                
+                <div class="ink-color-options">
+                    <div class="ink-color-option ink-black selected" data-color="#1A1A1A"></div>
+                    <div class="ink-color-option ink-blue" data-color="#1A3A8C"></div>
+                    <div class="ink-color-option ink-red" data-color="#EF233C"></div>
+                    <div class="ink-color-option ink-pencil" data-color="#6D6D6D"></div>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="ink-opacity">Ink Opacity</label>
+                    <input type="range" id="ink-opacity" min="0.7" max="1" step="0.05" value="0.9">
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h2>Paper Style</h2>
+                <div class="setting-row">
+                    <label for="paper-style">Paper Type</label>
+                    <select id="paper-style">
+                        <option value="blank">Blank White</option>
+                        <option value="lined" selected>Lined Notebook</option>
+                        <option value="grid">Grid Paper</option>
+                        <option value="yellow">Yellow Legal Pad</option>
+                    </select>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="paper-margin">Page Margin</label>
+                    <input type="range" id="paper-margin" min="20" max="80" value="50">
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel preview-panel">
+            <h2>Preview</h2>
+            <div class="preview-container">
+                <div class="paper lined-paper" id="output-paper">
+                    <div class="empty-state" id="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        <p>Your handwriting will appear here</p>
+                        <small>Start typing in the left panel to see the magic</small>
+                    </div>
+                    <div class="handwriting" id="output-text"></div>
+                </div>
+                <div class="loading" id="loading-indicator">
+                    <div class="spinner"></div>
+                    <p>Generating PDF...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel output-panel">
+            <h2>Export Options</h2>
+            <div class="output-options">
+                <button id="download-pdf">Download as PDF</button>
+                <button id="download-png">Download as PNG</button>
+                
+                <div class="settings-group">
+                    <h2>PDF Settings</h2>
+                    <div class="setting-row">
+                        <label for="pdf-size">Page Size</label>
+                        <select id="pdf-size">
+                            <option value="a4">A4</option>
+                            <option value="letter" selected>Letter</option>
+                            <option value="a5">A5</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <label for="pdf-orientation">Orientation</label>
+                        <select id="pdf-orientation">
+                            <option value="portrait" selected>Portrait</option>
+                            <option value="landscape">Landscape</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <span id="notification-message">Text copied to clipboard!</span>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputText = document.getElementById('input-text');
+            const outputText = document.getElementById('output-text');
+            const outputPaper = document.getElementById('output-paper');
+            const emptyState = document.getElementById('empty-state');
+            const fontStyle = document.getElementById('font-style');
+            const fontSize = document.getElementById('font-size');
+            const lineHeight = document.getElementById('line-height');
+            const inkColor = document.getElementById('ink-color');
+            const inkOpacity = document.getElementById('ink-opacity');
+            const paperStyle = document.getElementById('paper-style');
+            const paperMargin = document.getElementById('paper-margin');
+            const downloadPdf = document.getElementById('download-pdf');
+            const downloadPng = document.getElementById('download-png');
+            const pdfSize = document.getElementById('pdf-size');
+            const pdfOrientation = document.getElementById('pdf-orientation');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const inkColorOptions = document.querySelectorAll('.ink-color-option');
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            const sampleTextBtn = document.getElementById('sample-text-btn');
+            const sampleTexts = [
+                "The quick brown fox jumps over the lazy dog. 1234567890",
+                `Dear Diary,\n\nToday was an amazing day! I woke up early and went for a walk in the park. The weather was perfect - not too hot, not too cold.\n\nIn the afternoon, I met with some friends for coffee. We talked about our plans for the summer vacation. I'm thinking about going to the beach or maybe the mountains. The sunset was particularly beautiful today, with hues of orange and pink blending across the horizon. It reminded me of how important it is to appreciate the simple things in life.\n\nTomorrow, I plan to visit the library to borrow some books. I've been meaning to read more lately, especially classic literature. Maybe I'll start with something by Jane Austen or Mark Twain. Reading always helps me relax and expand my perspective on things.`,
+                `To-Do List:\n1. Buy groceries\n2. Finish the report\n3. Call mom\n4. Schedule dentist appointment\n5. Water the plants\n6. Clean the garage\n7. Pay electricity bill\n8. Return library books\n9. Organize workspace\n10. Plan weekend activities\n\nNotes:\nDon't forget to pick up the dry cleaning on Wednesday! Also, need to buy a birthday gift for Sarah - maybe that book she mentioned last time?`,
+                `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.\n\nPellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vestibulum tortor quam, feugiat vitae, ultricies eget, tempor sit amet, ante. Donec eu libero sit amet quam egestas semper. Aenean ultricies mi vitae est. Mauris placerat eleifend leo. Quisque sit amet est et sapien ullamcorper pharetra. Vestibulum erat wisi, condimentum sed, commodo vitae, ornare sit amet, wisi. Aenean fermentum, elit eget tincidunt condimentum, eros ipsum rutrum orci, sagittis tempus lacus enim ac dui. Donec non enim in turpis pulvinar facilisis. Ut felis. Praesent dapibus, neque id cursus faucibus, tortor neque egestas augue, eu vulputate magna eros eu erat. Aliquam erat volutpat. Nam dui mi, tincidunt quis, accumsan porttitor, facilisis luctus, metus.`
+            ];
+
+            // Hide loading indicator initially
+            loadingIndicator.style.display = 'none';
+
+            function updateHandwriting() {
+                const text = inputText.value;
+
+                if (text.length > 0) {
+                    emptyState.style.display = 'none';
+                    outputText.textContent = text;
+                    outputText.className = 'handwriting ' + fontStyle.value;
+                    outputText.style.fontSize = fontSize.value + 'px';
+                    outputText.style.color = inkColor.value;
+                    outputText.style.opacity = inkOpacity.value;
+                    outputText.style.lineHeight = lineHeight.value;
+                    outputPaper.className = 'paper';
+                    if (paperStyle.value === 'lined') {
+                        outputPaper.classList.add('lined-paper');
+                        outputText.style.lineHeight = '28px';
+                        outputText.style.paddingTop = '20px';
+                    } else if (paperStyle.value === 'grid') {
+                        outputPaper.classList.add('grid-paper');
+                    } else if (paperStyle.value === 'yellow') {
+                        outputPaper.classList.add('yellow-paper');
+                        outputText.style.lineHeight = '28px';
+                        outputText.style.paddingTop = '20px';
+                    }
+                    outputPaper.style.padding = paperMargin.value + 'px';
+                } else {
+                    emptyState.style.display = 'block';
+                    outputText.textContent = '';
+                }
+            }
+
+            function showNotification(message) {
+                notificationMessage.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            // Multi-page PDF export
+            downloadPdf.addEventListener('click', async function() {
+                if (inputText.value.length === 0) {
+                    showNotification('Please enter some text first');
+                    return;
+                }
+
+                loadingIndicator.style.display = 'flex';
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: pdfOrientation.value,
+                    unit: 'mm',
+                    format: pdfSize.value
+                });
+
+                // 1 mm = 3.779528 px
+                const mmToPx = 3.779528;
+                const pageWidthMM = pdf.internal.pageSize.getWidth();
+                const pageHeightMM = pdf.internal.pageSize.getHeight();
+                const pageWidthPx = Math.floor(pageWidthMM * mmToPx);
+                const pageHeightPx = Math.floor(pageHeightMM * mmToPx);
+
+                // Set up a clone for measuring
+                const clone = outputPaper.cloneNode(true);
+                clone.style.width = pageWidthPx + 'px';
+                clone.style.minWidth = pageWidthPx + 'px';
+                clone.style.maxWidth = pageWidthPx + 'px';
+                clone.style.position = 'absolute';
+                clone.style.left = '-9999px';
+                clone.style.top = '0';
+                clone.style.height = 'auto';
+                clone.style.maxHeight = 'none';
+                clone.style.overflow = 'visible';
+                document.body.appendChild(clone);
+
+                // Remove empty state if present
+                const emptyClone = clone.querySelector('.empty-state');
+                if (emptyClone) emptyClone.style.display = 'none';
+
+                // Get the content height
+                const totalHeight = clone.scrollHeight;
+
+                // Number of pages
+                const numPages = Math.ceil(totalHeight / pageHeightPx);
+
+                for (let i = 0; i < numPages; i++) {
+                    // For each page, create a page clone with the correct offset
+                    const pageClone = outputPaper.cloneNode(true);
+                    pageClone.style.width = pageWidthPx + 'px';
+                    pageClone.style.minWidth = pageWidthPx + 'px';
+                    pageClone.style.maxWidth = pageWidthPx + 'px';
+                    pageClone.style.height = pageHeightPx + 'px';
+                    pageClone.style.overflow = 'hidden';
+                    pageClone.style.position = 'absolute';
+                    pageClone.style.left = '-9999px';
+                    pageClone.style.top = '0';
+
+                    // Remove empty state if present
+                    const emptyPageClone = pageClone.querySelector('.empty-state');
+                    if (emptyPageClone) emptyPageClone.style.display = 'none';
+
+                    // Offset the text
+                    const textDiv = pageClone.querySelector('.handwriting');
+                    if (textDiv) {
+                        textDiv.style.transform = `translateY(-${i * pageHeightPx}px)`;
+                    }
+
+                    document.body.appendChild(pageClone);
+
+                    // Render this page
+                    await html2canvas(pageClone, {
+                        scale: 2,
+                        letterRendering: true,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: null
+                    }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png', 1.0);
+
+                        const imgWidth = pageWidthMM;
+                        if (i > 0) pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, pageHeightMM);
+                    });
+
+                    document.body.removeChild(pageClone);
+                }
+
+                document.body.removeChild(clone);
+
+                pdf.save('handwriting.pdf');
+                loadingIndicator.style.display = 'none';
+                showNotification('PDF downloaded successfully!');
+            });
+
+            // PNG export
+            downloadPng.addEventListener('click', function() {
+                if (inputText.value.length === 0) {
+                    showNotification('Please enter some text first');
+                    return;
+                }
+
+                loadingIndicator.style.display = 'flex';
+
+                html2canvas(outputPaper, {
+                    scale: 2,
+                    letterRendering: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'handwriting.png';
+                    link.href = canvas.toDataURL('image/png', 1.0);
+                    link.click();
+
+                    loadingIndicator.style.display = 'none';
+                    showNotification('PNG downloaded successfully!');
+                }).catch(err => {
+                    loadingIndicator.style.display = 'none';
+                    showNotification('Error generating PNG');
+                    console.error(err);
+                });
+            });
+
+            inputText.addEventListener('input', updateHandwriting);
+            fontStyle.addEventListener('change', updateHandwriting);
+            fontSize.addEventListener('input', updateHandwriting);
+            lineHeight.addEventListener('input', updateHandwriting);
+            inkColor.addEventListener('input', updateHandwriting);
+            inkOpacity.addEventListener('input', updateHandwriting);
+            paperStyle.addEventListener('change', updateHandwriting);
+            paperMargin.addEventListener('input', updateHandwriting);
+
+            inkColorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    inkColorOptions.forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    inkColor.value = this.getAttribute('data-color');
+                    updateHandwriting();
+                });
+            });
+
+            sampleTextBtn.addEventListener('click', function() {
+                const randomIndex = Math.floor(Math.random() * sampleTexts.length);
+                inputText.value = sampleTexts[randomIndex];
+                updateHandwriting();
+            });
+
+            updateHandwriting();
+        });
+    </script>
+</body>
+</html>
